@@ -4,7 +4,6 @@ from PyFlow.Packages.PyFlowBase.Tools import RESOURCES_DIR
 from PyFlow.Core.Common import Direction
 
 from Qt import QtGui
-from Qt.QtWidgets import QFileDialog
 
 
 class AlignTopTool(ShelfTool):

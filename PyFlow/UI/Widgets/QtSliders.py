@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import struct
 from Qt import QtGui, QtCore, QtWidgets
 
 sys.path.append(r"C:\Users\pedro\OneDrive\pcTools_v5\PyFlow")
@@ -1588,7 +1587,6 @@ class testWidg(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
-    import os
     import sys
 
     app = QtWidgets.QApplication(sys.argv)

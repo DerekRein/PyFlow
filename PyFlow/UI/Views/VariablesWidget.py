@@ -4,8 +4,6 @@ Variables input widget. Container for [UIVariable](@ref PyFlow.Core.Variable.UIV
 """
 from nine import str
 import json
-from types import MethodType
-import uuid
 
 from Qt import QtCore, QtGui
 from Qt.QtWidgets import (
@@ -17,7 +15,6 @@ from Qt.QtWidgets import (
 
 from PyFlow.UI.Canvas.UIVariable import UIVariable
 from PyFlow.UI.Views.VariablesWidget_ui import Ui_Form
-from PyFlow.UI.Canvas.UICommon import clearLayout
 from PyFlow.Core.Common import *
 
 VARIABLE_TAG = "VAR"

@@ -1,8 +1,5 @@
 from blinker import Signal
-import weakref
 import uuid
-import keyword
-import json
 from collections import OrderedDict
 try:
     from inspect import getfullargspec as getargspec
@@ -13,7 +10,6 @@ from multipledispatch import dispatch
 import collections
 
 from PyFlow import getPinDefaultValueByType
-from PyFlow import getRawNodeInstance
 from PyFlow.Core.Common import *
 from PyFlow.Core.Interfaces import INode
 from PyFlow import CreateRawPin
