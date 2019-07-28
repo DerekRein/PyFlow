@@ -22,9 +22,9 @@ from PyFlow.Core.Common import *
 def prepareNode(node):
     node.createInputPin(pinName="inExec", dataType="ExecPin", foo=node.processNode)
     node.createOutputPin(pinName="outExec", dataType="ExecPin")
-    node.createInputPin(pinName="a", dataType="IntPin", defaultValue=0, foo=None, structure=PinStructure.Single, constraint=None, structConstraint=None, allowedPins=[], group="")
-    node.createInputPin(pinName="b", dataType="IntPin", defaultValue=0, foo=None, structure=PinStructure.Single, constraint=None, structConstraint=None, allowedPins=[], group="")
-    node.createOutputPin(pinName="c", dataType="IntPin", defaultValue=0, structure=PinStructure.Single, constraint=None, structConstraint=None, allowedPins=[], group="")
+    node.createInputPin(pinName="a", dataType="IntPin", defaultValue=0, foo=None, structure=PinStructure.Single, constraint=None, structConstraint=None, supportedPinDataTypes=[], group="")
+    node.createInputPin(pinName="b", dataType="IntPin", defaultValue=0, foo=None, structure=PinStructure.Single, constraint=None, structConstraint=None, supportedPinDataTypes=[], group="")
+    node.createOutputPin(pinName="c", dataType="IntPin", defaultValue=0, structure=PinStructure.Single, constraint=None, structConstraint=None, supportedPinDataTypes=[], group="")
 
 
 def compute(node):
@@ -89,11 +89,6 @@ class UIPythonNode(UINodeBase):
 
     @nodeData.setter
     def nodeData(self, value):
-        # for groupsSide, groups in self.groups.items():
-        #     for grp in list(groups.values()):
-        #         grp.kill()
-        # self.groups['input'].clear()
-        # self.groups['output'].clear()
         self._rawNode.nodeData = value
 
     def onFileChanged(self, path):
@@ -144,8 +139,7 @@ class UIPythonNode(UINodeBase):
         super(UIPythonNode, self).kill()
 
     def onEdit(self):
-        settings = QtCore.QSettings(ConfigManager().PREFERENCES_CONFIG_PATH, QtCore.QSettings.IniFormat)
-        editCmd = settings.value("Preferences/General/EditorCmd")
+        editCmd = ConfigManager().getPrefsValue("PREFS", "General/EditorCmd")
         tempFilesDir = self.canvasRef().getApp().getTempDirectory()
 
         if self._filePath == "":

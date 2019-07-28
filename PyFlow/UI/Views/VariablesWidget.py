@@ -13,6 +13,7 @@ from Qt.QtWidgets import (
     QAbstractItemView
 )
 
+from PyFlow.UI.EditorHistory import EditorHistory
 from PyFlow.UI.Canvas.UIVariable import UIVariable
 from PyFlow.UI.Views.VariablesWidget_ui import Ui_Form
 from PyFlow.Core.Common import *
@@ -78,6 +79,7 @@ class VariablesWidget(QWidget, Ui_Form):
         self.actualize()
 
         self.clearProperties()
+        EditorHistory().saveState("Kill variable")
 
     def createVariableWrapperAndAddToList(self, rawVariable):
         uiVariable = UIVariable(rawVariable, self)
@@ -89,6 +91,7 @@ class VariablesWidget(QWidget, Ui_Form):
     def createVariable(self, dataType=str('BoolPin'), accessLevel=AccessLevel.public, uid=None):
         rawVariable = self.pyFlowInstance.graphManager.get().activeGraph().createVariable(dataType=dataType, accessLevel=accessLevel, uid=uid)
         uiVariable = self.createVariableWrapperAndAddToList(rawVariable)
+        EditorHistory().saveState("Create variable")
         return uiVariable
 
     def clearProperties(self):

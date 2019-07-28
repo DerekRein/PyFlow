@@ -18,6 +18,7 @@ from PyFlow.UI.Canvas.UIPinBase import (
     getUIPinInstance,
     PinGroup
 )
+from PyFlow.UI.EditorHistory import EditorHistory
 from PyFlow.UI.Canvas.UICommon import *
 from PyFlow.UI.Widgets.InputWidgets import createInputWidget
 from PyFlow.UI.Canvas.Painters import NodePainter
@@ -217,8 +218,8 @@ class NodeName(QGraphicsWidget):
 
     def sizeHint(self, which, constraint):
         w = QtGui.QFontMetrics(self.getFont()).width(self.getPlainText())
-        h = self.labelItem.boundingRect().height()
-        return QtCore.QSize(w, h)
+        h = self.labelItem.boundingRect().height() + 5
+        return QtCore.QSizeF(w, h)
 
     def setGeometry(self, rect):
         self.prepareGeometryChange()
@@ -234,6 +235,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
     # Event called when node name changes
     displayNameChanged = QtCore.Signal(str)
     drawlabel = None
+
     def __init__(self, raw_node, w=80, color=Colors.NodeBackgrounds, headColorOverride=None):
         super(UINodeBase, self).__init__()
         self.setFlag(QGraphicsWidget.ItemIsMovable)
@@ -269,6 +271,8 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
             self.drawlabel = True
         self.headColorOverride = headColorOverride
         self.headColor = NodeDefaults().PURE_NODE_HEAD_COLOR
+        if raw_node.headerColor is not None:
+            self.headColorOverride = QtGui.QColor.fromRgb(*raw_node.headerColor)
         self._w = 0
         self.h = 30
         self.minWidth = 50
@@ -363,11 +367,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         # Hiding/Moving By Group/collapse/By Pin
         self.pressedCommentNode = None
         self.owningCommentNode = None
-        self.edgesToHide = []
-        self.nodesNamesToMove = []
-        self.pinsToMove = {}
         self._rect = QtCore.QRectF(0, 0, self.minWidth, self.minHeight)
-        self.lastMousePos = QtCore.QPointF()
         self.mousePressPos = QtCore.QPointF()
 
         # Group pins
@@ -381,6 +381,10 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         self.isTemp = False
         self.isCommentNode = False
 
+        self.bExposeInputsToCompound = False
+        self.originalPropertyIndexes = {}
+        self.editedPropertyIndexes = {}
+
         # collapse action
         self._groups = {"input": {}, "output": {}}
         self.actionToggleCollapse = self._menu.addAction("ToggleCollapse")
@@ -389,9 +393,22 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         self.actionToggleCollapse.setData(NodeActionButtonInfo(":/nodeCollapse.svg", CollapseNodeActionButton))
         self.actionRefresh = self._menu.addAction("Refresh")
         self.actionRefresh.triggered.connect(self._rawNode.checkForErrors)
+        self.actionToggleExposeWidgetsToCompound = self._menu.addAction("Expose properties")
+        self.actionToggleExposeWidgetsToCompound.triggered.connect(self.onToggleExposeProperties)
+
+    def onToggleExposeProperties(self):
+        self.setExposePropertiesToCompound(not self.bExposeInputsToCompound)
+        EditorHistory().saveState("{} exposing widgets".format("Start" if self.bExposeInputsToCompound else "Stop"))
+
+    def setExposePropertiesToCompound(self, bExpose):
+        self.bExposeInputsToCompound = bExpose
+        self.update()
 
     def __repr__(self):
         return self._rawNode.__repr__()
+
+    def __str__(self):
+        return self._rawNode.__str__()
 
     @property
     def packageName(self):
@@ -528,7 +545,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
     @property
     def UIinputs(self):
         result = OrderedDict()
-        for rawPin in self._rawNode.inputs.values():
+        for rawPin in self._rawNode.orderedInputs.values():
             wrapper = rawPin.getWrapper()
             if wrapper is not None:
                 result[rawPin.uid] = wrapper()
@@ -537,7 +554,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
     @property
     def UIoutputs(self):
         result = OrderedDict()
-        for rawPin in self._rawNode.outputs.values():
+        for rawPin in self._rawNode.orderedOutputs.values():
             wrapper = rawPin.getWrapper()
             if wrapper is not None:
                 result[rawPin.uid] = wrapper()
@@ -581,16 +598,16 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
 
     def getData(self, pinName):
         if pinName in [p.name for p in self.inputs.values()]:
-            p = self.getPin(pinName, PinSelectionGroup.Inputs)
+            p = self.getPinSG(pinName, PinSelectionGroup.Inputs)
             return p.getData()
 
     def setData(self, pinName, data):
         if pinName in [p.name for p in self.outputs.values()]:
-            p = self.getPin(pinName, PinSelectionGroup.Outputs)
+            p = self.getPinSG(pinName, PinSelectionGroup.Outputs)
             p.setData(data)
 
-    def getPin(self, name, pinsGroup=PinSelectionGroup.BothSides):
-        pin = self._rawNode.getPin(str(name), pinsGroup)
+    def getPinSG(self, name, pinsGroup=PinSelectionGroup.BothSides):
+        pin = self._rawNode.getPinSG(str(name), pinsGroup)
         if pin is not None:
             if pin.getWrapper() is not None:
                 return pin.getWrapper()()
@@ -600,13 +617,13 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         return True
 
     def finalizeRename(self, accepted=False):
-        """Called by NodeName
+        """Called by :class:`~PyFlow.UI.Canvas.UINodeBase.NodeName`
 
-        If user pressed Escape name before editing will be restored. If User pressed Enter or removed focus
+        If user pressed :kbd:`escape` name before editing will be restored. If User pressed :kbd:`enter` or removed focus
         rename action will be accepted and node will be renamed and name will be checked for uniqueness.
 
-        Keyword Arguments:
-            accepted {bool} -- Wheter user accepted editing or not
+        :param accepted: Wheter user accepted editing or not
+        :type accepted: :class:`bool`
         """
         if accepted:
             name = self.nodeNameWidget.getPlainText().replace(" ", "")
@@ -652,6 +669,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
             template['resize'] = {'w': self._rect.right(), 'h': self._rect.bottom()}
         template['collapsed'] = self.collapsed
         template['headerHtml'] = self.nodeNameWidget.getHtml()
+        template['exposeInputsToCompound'] = self.bExposeInputsToCompound
         if len(self.groups) > 0:
             template['groups'] = {'input': {}, 'output': {}}
             for name, grp in self.groups['input'].items():
@@ -823,8 +841,6 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         self.updateNodeShape()
         self.setPos(self._rawNode.x, self._rawNode.y)
 
-        #assert(self.canvasRef() is not None), "CANVAS IS NONE"
-        #assert(self.canvasRef().graphManager.activeGraph() is not None), "ACTIVEGRAPH IS NONE"
         if self._rawNode.graph is None:
             print(self._rawNode.getName())
         assert(self._rawNode.graph() is not None), "NODE GRAPH IS NONE"
@@ -839,6 +855,8 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
 
         headerHtml = self.name
         if jsonTemplate is not None and jsonTemplate["wrapper"] is not None:
+            if "exposeInputsToCompound" in jsonTemplate["wrapper"]:
+                self.setExposePropertiesToCompound(jsonTemplate["wrapper"]["exposeInputsToCompound"])
             if "collapsed" in jsonTemplate["wrapper"]:
                 self.collapsed = jsonTemplate["wrapper"]["collapsed"]
             if "headerHtml" in jsonTemplate["wrapper"]:
@@ -1145,7 +1163,6 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
                     self.w = newWidth
                 self.updateNodeShape()
             self.update()
-        self.lastMousePos = event.pos()
 
     def mouseReleaseEvent(self, event):
         self.bResize = False
@@ -1226,7 +1243,10 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
 
         propertiesWidget.addWidget(baseCategory)
 
-        self.createInputWidgets(propertiesWidget)
+        inputsCategory = CollapsibleFormWidget(headName="Inputs")
+        self.createInputWidgets(inputsCategory)
+        if inputsCategory.Layout.count() > 0:
+            propertiesWidget.addWidget(inputsCategory)
 
         Info = CollapsibleFormWidget(headName="Info", collapsed=True, hideLabels=True)
         doc = QTextBrowser()
@@ -1235,11 +1255,10 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
         Info.addWidget(widget=doc)
         propertiesWidget.addWidget(Info)
 
-    def createInputWidgets(self, propertiesWidget):
+    def createInputWidgets(self, inputsCategory, inGroup=None, pins=True):
         # inputs
         if len([i for i in self.UIinputs.values()]) != 0:
-            inputsCategory = CollapsibleFormWidget(headName="Inputs")
-            sortedInputs = sorted(self.UIinputs.values(), key=lambda x: x.name)
+            sortedInputs = self.UIinputs.values()
             for inp in sortedInputs:
                 if inp.isArray() or inp.isDict() or inp._rawPin.hidden:
                     continue
@@ -1249,18 +1268,20 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
                     inp.dataBeenSet.connect(w.setWidgetValueNoSignals)
                     w.blockWidgetSignals(True)
                     data = inp.currentData()
-                    if isinstance(inp.currentData(), dictElement):
+                    if isinstance(inp.currentData(), DictElement):
                         data = inp.currentData()[1]
                     w.setWidgetValue(data)
                     w.blockWidgetSignals(False)
-                    w.setObjectName(inp.getName())
-                    inputsCategory.addWidget(inp.name, w)
+                    w.setObjectName(inp.getFullName())
+                    group = inGroup
+                    if inGroup is None:
+                        group = inp._rawPin.group
+                    inputsCategory.addWidget(inp.name, w, group=group)
                     if inp.hasConnections():
                         w.setEnabled(False)
-            propertiesWidget.addWidget(inputsCategory)
             return inputsCategory
 
-    def createOutputWidgets(self,propertiesWidget,headName="Outputs"):
+    def createOutputWidgets(self, propertiesWidget, headName="Outputs"):
         inputsCategory = CollapsibleFormWidget(headName=headName)
         sortedInputs = sorted(self.UIPins.values(), key=lambda x: x.name)
         for inp in sortedInputs:
@@ -1272,14 +1293,12 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
                 inp.dataBeenSet.connect(w.setWidgetValueNoSignals)
                 w.blockWidgetSignals(True)
                 data = inp.currentData()
-                if isinstance(inp.currentData(), dictElement):
+                if isinstance(inp.currentData(), DictElement):
                     data = inp.currentData()[1]
                 w.setWidgetValue(data)
                 w.blockWidgetSignals(False)
-                w.setObjectName(inp.getName())
+                w.setObjectName(inp.getFullName())
                 inputsCategory.addWidget(inp.name, w)
-                #if inp.hasConnections():
-                #    w.setEnabled(False)                
         propertiesWidget.addWidget(inputsCategory)
         return inputsCategory
 
@@ -1385,7 +1404,7 @@ class UINodeBase(QGraphicsWidget, IPropertiesViewSupport, IUINode):
 
     @staticmethod
     def removePinByName(node, name):
-        pin = node.getPin(name)
+        pin = node.getPinSG(name)
         if pin:
             pin.kill()
 

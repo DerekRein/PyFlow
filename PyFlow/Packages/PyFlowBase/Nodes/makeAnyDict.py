@@ -7,11 +7,11 @@ from PyFlow.Core.Common import *
 class makeAnyDict(NodeBase):
     def __init__(self, name):
         super(makeAnyDict, self).__init__(name)
-        self.KeyType = self.createInputPin('KeyType', 'AnyPin', defaultValue=str(""), constraint="1", allowedPins=getHashableDataTypes())
+        self.KeyType = self.createInputPin('KeyType', 'AnyPin', defaultValue=str(""), constraint="1", supportedPinDataTypes=getHashableDataTypes())
         self.KeyType.hidden = True
 
         self.arrayData = self.createInputPin('data', 'AnyPin', structure=PinStructure.Dict)
-        self.arrayData.enableOptions(PinOptions.AllowMultipleConnections | PinOptions.AllowAny | PinOptions.DictElementSuported)
+        self.arrayData.enableOptions(PinOptions.AllowMultipleConnections | PinOptions.AllowAny | PinOptions.DictElementSupported)
         self.arrayData.disableOptions(PinOptions.ChangeTypeOnConnection | PinOptions.SupportsOnlyArrays)
         self.outArray = self.createOutputPin('out', 'AnyPin', structure=PinStructure.Dict)
         self.outArray.enableOptions(PinOptions.AllowAny)
@@ -45,7 +45,7 @@ class makeAnyDict(NodeBase):
         return 'Creates a list from connected pins'
 
     def updateDicts(self,dataType):
-        self.arrayData.updateConectedDicts([],self.KeyType.dataType)
+        self.arrayData.updateConnectedDicts([],self.KeyType.dataType)
 
     def inPinConnected(self,inputpin):
         inp = inputpin.getDictElementNode([])
@@ -71,13 +71,13 @@ class makeAnyDict(NodeBase):
                 self.constraints[inp.key.constraint].remove(inp.key)
 
     def compute(self, *args, **kwargs):
-        outArray = pyf_dict(self.KeyType.dataType)
+        outArray = PFDict(self.KeyType.dataType)
         ySortedPins = sorted(self.arrayData.affected_by, key=lambda pin: pin.owningNode().y)
 
         for i in ySortedPins:
-            if isinstance(i.getData(), dictElement):
+            if isinstance(i.getData(), DictElement):
                 outArray[i.getData()[0]] = i.getData()[1]
-            elif isinstance(i.getData(), pyf_dict):
+            elif isinstance(i.getData(), PFDict):
                 for key,value in i.getData().items():
                     outArray[key] = value
 

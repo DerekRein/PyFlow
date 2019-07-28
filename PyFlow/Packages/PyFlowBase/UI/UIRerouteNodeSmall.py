@@ -42,8 +42,7 @@ class UIRerouteNodeSmall(UINodeBase):
         self.input.show()
         self.output.show()
         self.input.setPos(self.boundingRect().left() - self.input.pinSize, 1.5)
-        self.output.setPos(self.boundingRect().right() -
-                           self.input.pinSize, 1.5)
+        self.output.setPos(self.boundingRect().right() - self.input.pinSize, 1.5)
 
     def hidePins(self):
         self.hiddenPins = True
@@ -76,13 +75,13 @@ class UIRerouteNodeSmall(UINodeBase):
             source = inp.connections[0].source()
             for out in newOuts:
                 drawSource = inp.connections[0].drawSource
-                self.canvasRef().connectPins(source, out[0])
+                self.canvasRef().connectPinsInternal(source, out[0])
         super(UIRerouteNodeSmall, self).kill()
 
     def postCreate(self, jsonTemplate=None):
         super(UIRerouteNodeSmall, self).postCreate(jsonTemplate)
-        self.input = self.getPin("in")
-        self.output = self.getPin("out")
+        self.input = self.getPinSG("in")
+        self.output = self.getPinSG("out")
         self.input.bLabelHidden = True
         self.output.bLabelHidden = True
         self.inputsLayout.removeItem(self.input)

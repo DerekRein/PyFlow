@@ -81,7 +81,7 @@ class UIConnection(QGraphicsPathItem):
         return self.canvasRef().graphManager.activeGraph() == self.source()._rawPin.owningNode().graph()
 
     def __repr__(self):
-        return "{0} -> {1}".format(self.source().getName(), self.destination().getName())
+        return "{0} -> {1}".format(self.source().getFullName(), self.destination().getFullName())
 
     def setColor(self, color):
         self.pen.setColor(color)
@@ -164,9 +164,9 @@ class UIConnection(QGraphicsPathItem):
         srcUUID = UUID(data['sourceUUID'])
         dstUUID = UUID(data['destinationUUID'])
         # if srcUUID in graph.pins and dstUUID in graph.pins:
-        srcPin = graph.findPin(srcUUID)
+        srcPin = graph.findPinByUid(srcUUID)
         assert(srcPin is not None)
-        dstPin = graph.findPin(dstUUID)
+        dstPin = graph.findPinByUid(dstUUID)
         assert(dstPin is not None)
         connection = graph.connectPinsInternal(srcPin, dstPin)
         assert(connection is not None)
@@ -175,14 +175,14 @@ class UIConnection(QGraphicsPathItem):
     def serialize(self):
         script = {'sourceUUID': str(self.source().uid),
                   'destinationUUID': str(self.destination().uid),
-                  'sourceName': self.source()._rawPin.getName(),
-                  'destinationName': self.destination()._rawPin.getName(),
+                  'sourceName': self.source()._rawPin.getFullName(),
+                  'destinationName': self.destination()._rawPin.getFullName(),
                   'uuid': str(self.uid)
                   }
         return script
 
     def __str__(self):
-        return '{0} >>> {1}'.format(self.source()._rawPin.getName(), self.destination()._rawPin.getName())
+        return '{0} >>> {1}'.format(self.source()._rawPin.getFullName(), self.destination()._rawPin.getFullName())
 
     def drawThick(self):
         self.pen.setWidthF(self.thickness + (self.thickness / 1.5))
@@ -229,7 +229,7 @@ class UIConnection(QGraphicsPathItem):
         self.update()
 
     def source_port_name(self):
-        return self.source().getName()
+        return self.source().getFullName()
 
     def shape(self):
         qp = QtGui.QPainterPathStroker()

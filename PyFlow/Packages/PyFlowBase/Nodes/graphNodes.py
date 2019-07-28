@@ -13,7 +13,7 @@ class graphInputs(NodeBase):
 
     def getUniqPinName(self, name):
         result = name
-        graphNodes = self.graph().getNodes(classNameFilters=['graphInputs', 'graphOutputs'])
+        graphNodes = self.graph().getNodesList(classNameFilters=['graphInputs', 'graphOutputs'])
         conflictingPinNames = set()
         for node in graphNodes:
             for pin in node.pins:
@@ -39,7 +39,7 @@ class graphInputs(NodeBase):
         p = self.createOutputPin(name, dataType, constraint=name, structConstraint=name, structure=PinStructure.Multi)
         p.enableOptions(PinOptions.RenamingEnabled | PinOptions.Dynamic)
         if dataType == "AnyPin":
-            p.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSuported)
+            p.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSupported)
         return p
 
     def compute(self, *args, **kwargs):
@@ -68,7 +68,7 @@ class graphOutputs(NodeBase):
 
     def getUniqPinName(self, name):
         result = name
-        graphNodes = self.graph().getNodes(classNameFilters=['graphInputs', 'graphOutputs'])
+        graphNodes = self.graph().getNodesList(classNameFilters=['graphInputs', 'graphOutputs'])
         conflictingPinNames = set()
         for node in graphNodes:
             for pin in node.pins:
@@ -105,7 +105,7 @@ class graphOutputs(NodeBase):
         p = self.createInputPin(name, dataType, constraint=name, structConstraint=name, structure=PinStructure.Multi)
         p.enableOptions(PinOptions.RenamingEnabled | PinOptions.Dynamic)
         if dataType == "AnyPin":
-            p.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSuported)
+            p.enableOptions(PinOptions.AllowAny | PinOptions.DictElementSupported)
         return p
 
     def compute(self, *args, **kwargs):

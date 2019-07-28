@@ -1,13 +1,9 @@
 from PyFlow.Core import NodeBase
 from PyFlow.Core.NodeBase import NodePinsSuggestionsHelper
 from PyFlow.Core.Common import *
+from PyFlow.Packages.PyFlowBase.Nodes import FLOW_CONTROL_COLOR
 
 
-## charge node
-#
-# Each time node called it accumulates the step value.
-# When accumulated value reaches "amount" - completed pin called.
-# Useful when you need to wait some time inside some tick function.
 class charge(NodeBase):
     def __init__(self, name):
         super(charge, self).__init__(name)
@@ -20,6 +16,7 @@ class charge(NodeBase):
 
         self.completed = self.createOutputPin('completed', 'ExecPin')
         self._currentAmount = 0
+        self.headerColor = FLOW_CONTROL_COLOR
 
     @staticmethod
     def pinTypeHints():

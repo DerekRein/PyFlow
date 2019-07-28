@@ -22,7 +22,7 @@ class UIConvertToNode(UINodeBase):
 
     def postCreate(self, jsonTemplate=None):
         super(UIConvertToNode, self).postCreate(jsonTemplate)
-        self.output = self.getPin("result")
+        self.output = self.getPinSG("result")
         self.output.OnPinChanged.connect(self.changeOnConection)
         self.changeType(self.output.dataType)
         self.updateNodeShape()
@@ -42,12 +42,11 @@ class UIConvertToNode(UINodeBase):
         self.update()
         self.canvasRef().tryFillPropertiesView(self)
 
-    def createInputWidgets(self, propertiesWidget):
-        inputsCategory = super(
-            UIConvertToNode, self).createInputWidgets(propertiesWidget)
+    def createInputWidgets(self, inputsCategory, group=None, pins=True):
+        preIndex = inputsCategory.Layout.count()
+        if pins:
+            super(UIConvertToNode, self).createInputWidgets(inputsCategory, group)
         selector = QComboBox()
-        overrideType = QCheckBox()
-
         for i in self._rawNode.pinTypes:
             selector.addItem(i)
         if self.output.dataType in self._rawNode.pinTypes:
@@ -55,5 +54,4 @@ class UIConvertToNode(UINodeBase):
                 self._rawNode.pinTypes.index(self.output.dataType))
 
         selector.activated.connect(self._rawNode.updateType)
-
-        inputsCategory.insertWidget(0, "DataType", selector)
+        inputsCategory.insertWidget(preIndex, "DataType", selector, group=group)
